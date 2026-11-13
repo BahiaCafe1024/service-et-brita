@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Filtres Brita">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0b6e80">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Filtres Brita</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column, summary on top, restaurants sorted by next due date, add form below. */
+:root {
+  --bg: #edf2f4;
+  --surface: #f8fbfc;
+  --ink: #10252e;
+  --muted: #53707b;
+  --line: #cfdde2;
+  --accent: #0b6e80;
+  --accent-ink: #ffffff;
+  --water: #bfe0e7;
+  --late: #b3261e;
+  --late-bg: #f8dedb;
+  --soon: #8f5200;
+  --soon-bg: #f8e8c9;
+  --ok: #1d6e46;
+  --ok-bg: #d7eee1;
+  --font-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1418; --surface: #132127; --ink: #e2eef1; --muted: #8fa9b2; --line: #243a43;
+    --accent: #52b8cc; --accent-ink: #06222a; --water: #1d4a56;
+    --late: #ff8f86; --late-bg: #47211f; --soon: #f0b559; --soon-bg: #3e2d10; --ok: #7fd4a1; --ok-bg: #163a29;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1418; --surface: #132127; --ink: #e2eef1; --muted: #8fa9b2; --line: #243a43;
+  --accent: #52b8cc; --accent-ink: #06222a; --water: #1d4a56;
+  --late: #ff8f86; --late-bg: #47211f; --soon: #f0b559; --soon-bg: #3e2d10; --ok: #7fd4a1; --ok-bg: #163a29;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 2rem; line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+.summary { margin: 8px 0 0; color: var(--muted); }
+.summary strong { color: var(--ink); font-weight: 600; }
+
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.name { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0; overflow-wrap: anywhere; min-width: 0; }
+.note { color: var(--muted); font-size: 0.875rem; margin: 2px 0 0; overflow-wrap: anywhere; }
+.pill { font-size: 0.8125rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.pill.late { background: var(--late-bg); color: var(--late); }
+.pill.soon { background: var(--soon-bg); color: var(--soon); }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+
+.dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.dates dt { font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.dates dd { margin: 0; font-family: var(--font-mono); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+
+.gauge { height: 8px; border-radius: 999px; background: var(--water); overflow: hidden; }
+.gauge span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.gauge.late span { background: var(--late); }
+.gauge.soon span { background: var(--soon); }
+.gauge-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--muted); margin-top: 4px; font-family: var(--font-mono); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+button, .btn { font: inherit; font-size: 0.9rem; font-weight: 500; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; min-height: 40px; }
+button:hover, .btn:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.danger { color: var(--late); }
+button:focus-visible, .btn:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.edit { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.edit .full { grid-column: 1 / -1; }
+@media (max-width: 480px) { .edit { grid-template-columns: 1fr; } }
+.filter-name { font-size: 0.9rem; font-weight: 500; margin: 4px 0 0; overflow-wrap: anywhere; }
+.search { position: relative; }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--muted); pointer-events: none; }
+.search input { padding-left: 40px; background: var(--surface); }
+.empty { border: 1px dashed var(--line); border-radius: 10px; padding: 20px; color: var(--muted); }
+.empty p { margin: 0; }
+.empty p + p { margin-top: 6px; }
+
+form { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+form h2, form .full { grid-column: 1 / -1; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8125rem; font-weight: 600; color: var(--muted); min-width: 0; }
+input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; min-height: 42px; width: 100%; min-width: 0; }
+.status { font-size: 0.8125rem; color: var(--muted); margin: 0; }
+[hidden] { display: none !important; }
+.logo { display: block; width: 224px; max-width: 70%; height: auto; margin: 0 0 16px; border-radius: 10px; }
+.photo { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+.photo img { display: block; width: 100%; max-height: 220px; object-fit: cover; }
+.photo a { display: block; }
+.photo span { position: absolute; left: 8px; bottom: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; }
+.push { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.push .status { flex: 1 1 200px; }
+@media (max-width: 480px) { form { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) { .gauge span { transition: width 0.4s ease; } }
+</style>
+
+</head>
+<body>
+<main>
+  <header>
+    <img class="logo" src="logo.png" alt="Bahia Café" width="224" height="84">
+    <p class="eyebrow">Entretien des machines à café</p>
+    <h1>Filtres Brita</h1>
+    <p class="summary" id="summary">Chargement…</p>
+    <div class="push" id="push" hidden>
+      <button type="button" id="push-btn">Activer les rappels</button>
+      <p class="status" id="push-status" role="status"></p>
+    </div>
+  </header>
+
+  <div class="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
+    <input id="q" type="search" placeholder="Rechercher un restaurant" aria-label="Rechercher un restaurant" autocomplete="off" autocapitalize="off">
+  </div>
+
+  <ul class="list" id="list" aria-live="polite"></ul>
+
+  <form id="add-form" autocomplete="off">
+    <h2>Ajouter un restaurant</h2>
+    <label class="full" for="f-name">Restaurant
+      <input id="f-name" required maxlength="80" placeholder="Nom du restaurant">
+    </label>
+    <label class="full" for="f-address">Adresse (facultatif)
+      <input id="f-address" maxlength="160" placeholder="Ex. Rue du Lac 12, 1000 Lausanne" autocomplete="off">
+    </label>
+    <label class="full" for="f-filter">Nom du filtre (facultatif)
+      <input id="f-filter" maxlength="80" placeholder="Ex. Brita Maxtra Pro">
+    </label>
+    <label class="full" for="f-service">Service d’entretien (facultatif)
+      <input id="f-service" maxlength="120" placeholder="Ex. Café Service SA, contrat annuel">
+    </label>
+    <label for="f-maint">Dernier entretien (facultatif)
+      <input id="f-maint" type="date">
+    </label>
+    <label for="f-date">Changement du filtre
+      <input id="f-date" type="date" required>
+    </label>
+    <label class="full" for="f-note">Note (facultatif)
+      <input id="f-note" maxlength="80" placeholder="Machine, étage…">
+    </label>
+    <div class="full actions">
+      <button class="primary" type="submit" id="f-submit">Ajouter</button>
+    </div>
+    <p class="status full" id="status" role="status"></p>
+  </form>
+</main>
+
+<input type="file" id="photo-input" accept="image/*" hidden>
+<script>
+(function () {
+  /* Collez ici les deux valeurs de votre projet Supabase (Settings > API). */
+  var SUPABASE_URL = 'https://kdtrsyxxqaqmjvpaxmdo.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_GOHrEzhuAk34JhRXGBwnZg_myMGhdSe';
+
+  var YEAR_DAYS = 365;
+  var listEl = document.getElementById('list');
+  var summaryEl = document.getElementById('summary');
+  var statusEl = document.getElementById('status');
+  var form = document.getElementById('add-form');
+  var items = [];
+  var store = null;       // db collection when available
+  var confirmId = null;   // id awaiting delete confirmation
+  var query = '';         // search text
+  var editId = null;      // id being edited
+  var draft = null;       // values typed in the edit form
+
+  function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function iso(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function parse(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function today() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function addYear(d) { var r = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate()); if (r.getMonth() !== d.getMonth()) r = new Date(d.getFullYear() + 1, d.getMonth() + 1, 0); return r; }
+  function diffDays(a, b) { return Math.round((Date.UTC(a.getFullYear(), a.getMonth(), a.getDate()) - Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())) / 86400000); }
+  function fmt(d) { return d.toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function plural(n, one, many) { return n + ' ' + (n > 1 ? many : one); }
+
+  var MAINT_MONTHS = 4;
+  function minfo(it) {
+    if (!it.lastMaintenance) return null;
+    var last = parse(it.lastMaintenance), due = addMonths(last, MAINT_MONTHS), left = diffDays(due, today());
+    var total = Math.max(1, diffDays(due, last));
+    var used = Math.min(1, Math.max(0, 1 - left / total));
+    var cls = left < 0 ? 'late' : (left <= 30 ? 'soon' : 'ok');
+    var label;
+    if (left < 0) label = 'En retard de ' + plural(-left, 'jour', 'jours');
+    else if (left === 0) label = 'À faire aujourd’hui';
+    else if (left <= 60) label = 'Dans ' + plural(left, 'jour', 'jours');
+    else label = 'Dans ' + Math.round(left / 30.4) + ' mois';
+    return { due: due, left: left, used: used, cls: cls, label: label };
+  }
+  function gaugeHtml(cls, used, aria, leftText, rightText) {
+    var pct = Math.round(used * 100);
+    return '<div><div class="gauge ' + cls + '" role="img" aria-label="' + esc(aria) + ' ' + pct + ' %"><span style="width:' + pct + '%"></span></div>' +
+      '<div class="gauge-label"><span>' + esc(leftText) + '</span><span>' + esc(rightText) + '</span></div></div>';
+  }
+  function info(it) {
+    var last = parse(it.lastChange);
+    var due = addYear(last);
+    var left = diffDays(due, today());
+    var used = Math.min(1, Math.max(0, 1 - left / YEAR_DAYS));
+    var cls = left < 0 ? 'late' : (left <= 30 ? 'soon' : 'ok');
+    var label;
+    if (left < 0) label = 'En retard de ' + plural(-left, 'jour', 'jours');
+    else if (left === 0) label = 'À changer aujourd’hui';
+    else if (left <= 60) label = 'Dans ' + plural(left, 'jour', 'jours');
+    else label = 'Dans ' + Math.round(left / 30.4) + ' mois';
+    return { last: last, due: due, left: left, used: used, cls: cls, label: label };
+  }
+
+  function photoUrl(it) { return SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/public/machines/' + encodeURIComponent(it.id) + '.jpg?v=' + it.photoVersion; }
+  function loadBitmap(file) {
+    if (window.createImageBitmap) {
+      return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(function () { return createImageBitmap(file); });
+    }
+    return new Promise(function (res, rej) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); res(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('image')); };
+      img.src = url;
+    });
+  }
+  function shrink(file, max) {
+    return loadBitmap(file).then(function (img) {
+      var w = img.width || img.naturalWidth, hgt = img.height || img.naturalHeight;
+      var s = Math.min(1, max / Math.max(w, hgt)), c = document.createElement('canvas');
+      c.width = Math.round(w * s); c.height = Math.round(hgt * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      return new Promise(function (res, rej) { c.toBlob(function (b) { b ? res(b) : rej(new Error('blob')); }, 'image/jpeg', 0.8); });
+    });
+  }
+  var toastEl = null, toastTimer = null;
+  function toast(msg, bad) {
+    if (!toastEl) {
+      toastEl = document.createElement('div');
+      toastEl.setAttribute('role', 'status');
+      toastEl.style.cssText = 'position:fixed;left:16px;right:16px;bottom:16px;z-index:50;padding:12px 14px;border-radius:10px;font-size:0.9375rem;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:520px;margin:0 auto;color:#fff';
+      document.body.appendChild(toastEl);
+    }
+    toastEl.style.background = bad ? '#b3261e' : '#0b4f5e';
+    toastEl.textContent = msg; toastEl.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.hidden = true; }, bad ? 12000 : 5000);
+  }
+  function uploadPhoto(id, blob) {
+    return fetch(SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/machines/' + encodeURIComponent(id) + '.jpg', {
+      method: 'POST', headers: { apikey: SUPABASE_KEY, 'Content-Type': 'image/jpeg', 'x-upsert': 'true' }, body: blob
+    }).then(function (r) { if (!r.ok) { var er = new Error('http ' + r.status); er.code = r.status; throw er; } });
+  }
+  function deletePhoto(id) {
+    return fetch(SUPABASE_URL.replace(/\/$/, '') + '/storage/v1/object/machines/' + encodeURIComponent(id) + '.jpg', { method: 'DELETE', headers: { apikey: SUPABASE_KEY } }).catch(function () {});
+  }
+  var photoConfirmId = null;
+  var photoId = null, photoInput = document.getElementById('photo-input');
+  photoInput.addEventListener('change', function () {
+    var f = photoInput.files && photoInput.files[0], id = photoId;
+    photoInput.value = '';
+    if (!f) { toast('Aucune photo reçue. Réessayez et validez la photo après l’avoir prise.', true); return; }
+    var it = items.find(function (x) { return x.id === id; });
+    if (!it) { toast('Restaurant introuvable, rechargez la page.', true); return; }
+    toast('Envoi de la photo de ' + it.name + '…');
+    shrink(f, 1280).catch(function () {
+      if (f.type === 'image/jpeg' && f.size <= 5 * 1024 * 1024) return f;
+      throw new Error('format');
+    }).then(function (blob) { return uploadPhoto(id, blob); }).then(function () {
+      return saveItem(Object.assign({}, it, { photoVersion: Date.now() }));
+    }).then(function () { toast('Photo enregistrée pour ' + it.name + '.'); }, function (err) {
+      var m = err && err.message === 'format' ? 'Format de photo non pris en charge. Reprenez la photo avec l’appareil photo du téléphone.'
+        : (err && err.code ? 'Envoi refusé par le serveur (code ' + err.code + '). Réessayez.' : 'Envoi impossible. Vérifiez la connexion et réessayez.');
+      toast(m, true);
+    });
+  });
+  function hasPos(it) { return typeof it.latitude === 'number' && typeof it.longitude === 'number' && isFinite(it.latitude) && isFinite(it.longitude); }
+  function mapsUrl(addr) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr); }
+
+  function addMonths(d, n) {
+    var r = new Date(d.getFullYear(), d.getMonth() + n, d.getDate());
+    if (r.getDate() !== d.getDate()) r = new Date(d.getFullYear(), d.getMonth() + n + 1, 0);
+    return r;
+  }
+
+  function maintenanceUrl(it) {
+    var start = addMonths(it.lastMaintenance ? parse(it.lastMaintenance) : today(), 4);
+    if (start < today()) start = today();
+    var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    var compact = function (d) { return iso(d).replace(/-/g, ''); };
+    var details = 'Entretien de la machine à café.' + (it.maintenanceService ? ' Service : ' + it.maintenanceService + '.' : '') + (it.filterName ? ' Filtre : ' + it.filterName + '.' : '') + (it.note ? ' ' + it.note : '');
+    var q = [
+      'action=TEMPLATE',
+      'text=' + encodeURIComponent('Entretien machine à café : ' + it.name),
+      'dates=' + compact(start) + '/' + compact(end),
+      'recur=' + encodeURIComponent('RRULE:FREQ=MONTHLY;INTERVAL=4'),
+      'details=' + encodeURIComponent(details)
+    ];
+    return 'https://calendar.google.com/calendar/render?' + q.join('&');
+  }
+
+  function calendarUrl(it, i) {
+    var start = i.left < 0 ? today() : i.due;
+    var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    var compact = function (d) { return iso(d).replace(/-/g, ''); };
+    var q = [
+      'action=TEMPLATE',
+      'text=' + encodeURIComponent('Changer le filtre Brita : ' + it.name),
+      'dates=' + compact(start) + '/' + compact(end),
+      'recur=' + encodeURIComponent('RRULE:FREQ=YEARLY'),
+      'details=' + encodeURIComponent('Remplacer le filtre à eau Brita de la machine à café.' + (it.filterName ? ' Filtre : ' + it.filterName + '.' : '') + (it.maintenanceService ? ' Entretien : ' + it.maintenanceService + '.' : '') + (it.note ? ' ' + it.note : ''))
+    ];
+    return 'https://calendar.google.com/calendar/render?' + q.join('&');
+  }
+
+  function render() {
+    var sorted = items.map(function (it) { return { it: it, i: info(it) }; })
+      .sort(function (a, b) { return a.i.due - b.i.due; });
+
+    var urgent = sorted.filter(function (x) { return x.i.left <= 30; }).length;
+    if (!sorted.length) summaryEl.innerHTML = 'Aucun restaurant pour l’instant.';
+    else if (urgent) summaryEl.innerHTML = '<strong>' + plural(urgent, 'filtre', 'filtres') + '</strong> à changer dans les 30 prochains jours ou en retard.';
+    else summaryEl.innerHTML = 'Tous les filtres sont à jour.';
+
+    if (!sorted.length) {
+      listEl.innerHTML = '<li class="empty"><p><strong>Ajoutez votre premier restaurant ci-dessous.</strong></p><p>Indiquez la date du dernier changement de filtre. L’échéance suivante est calculée un an plus tard, et vous pouvez l’ajouter à votre calendrier avec un rappel annuel.</p></li>';
+      return;
+    }
+
+    var q = norm(query).trim();
+    var shown = q ? sorted.filter(function (x) { return norm(x.it.name + ' ' + (x.it.note || '') + ' ' + (x.it.filterName || '') + ' ' + (x.it.maintenanceService || '') + ' ' + (x.it.address || '')).indexOf(q) !== -1; }) : sorted;
+    if (!shown.length) {
+      listEl.innerHTML = '<li class="empty"><p><strong>Aucun résultat pour « ' + esc(query.trim()) + ' ».</strong></p><p>Vérifiez l’orthographe ou effacez la recherche.</p></li>';
+      return;
+    }
+    listEl.innerHTML = shown.map(function (x) {
+      var it = x.it, i = x.i, mi = minfo(it);
+      var confirming = confirmId === it.id;
+      if (editId === it.id && draft) {
+        return '<li class="item" data-id="' + esc(it.id) + '"><div class="edit">' +
+          '<label class="full" for="e-name">Restaurant<input id="e-name" maxlength="80" value="' + esc(draft.name) + '"></label>' +
+          '<label class="full" for="e-address">Adresse<input id="e-address" maxlength="160" value="' + esc(draft.address) + '"></label>' +
+          '<label class="full" for="e-filter">Nom du filtre<input id="e-filter" maxlength="80" value="' + esc(draft.filterName) + '"></label>' +
+          '<label class="full" for="e-service">Service d’entretien<input id="e-service" maxlength="120" value="' + esc(draft.maintenanceService) + '"></label>' +
+          '<label for="e-maint">Dernier entretien (facultatif)<input id="e-maint" type="date" value="' + esc(draft.lastMaintenance || '') + '"></label>' +
+          '<label for="e-date">Changement du filtre<input id="e-date" type="date" value="' + esc(draft.lastChange) + '"></label>' +
+          '<label class="full" for="e-note">Note (facultatif)<input id="e-note" maxlength="80" value="' + esc(draft.note) + '"></label>' +
+          '<div class="full actions"><button class="primary" data-act="save">Enregistrer</button><button data-act="cancel">Annuler</button></div></div></li>';
+      }
+      return '<li class="item" data-id="' + esc(it.id) + '">' +
+        '<div class="item-top"><div><h3 class="name">' + esc(it.name) + '</h3>' +
+        ((it.address || hasPos(it)) ? '<p class="note">' + esc([it.address, hasPos(it) ? 'GPS ' + it.latitude.toFixed(5) + ', ' + it.longitude.toFixed(5) : ''].filter(Boolean).join(' · ')) + '</p>' : '') +
+        (it.filterName ? '<p class="filter-name">Filtre : ' + esc(it.filterName) + '</p>' : '') +
+        (it.maintenanceService ? '<p class="filter-name">Entretien : ' + esc(it.maintenanceService) + '</p>' : '') +
+        '</div><span class="pill ' + i.cls + '">' + esc(i.label) + '</span></div>' +
+        '<dl class="dates"><div><dt>Dernier entretien</dt><dd>' + (it.lastMaintenance ? esc(fmt(parse(it.lastMaintenance))) : '—') + '</dd></div>' +
+        '<div><dt>Prochain entretien</dt><dd>' + (mi ? esc(fmt(mi.due)) : '—') + '</dd></div></dl>' +
+        (mi ? gaugeHtml(mi.cls, mi.used, 'Entretien écoulé à', 'Entretien fait', mi.label) : gaugeHtml('ok', 0, 'Aucun entretien enregistré', 'Aucun entretien enregistré', 'Tous les ' + MAINT_MONTHS + ' mois')) +
+        '<dl class="dates"><div><dt>Changement du filtre</dt><dd>' + esc(fmt(i.last)) + '</dd></div>' +
+        '<div><dt>Prochain changement</dt><dd>' + esc(fmt(i.due)) + '</dd></div></dl>' +
+        gaugeHtml(i.cls, i.used, 'Filtre utilisé à', 'Filtre neuf', Math.round(i.used * 100) + ' % de l’année') +
+        (it.note ? '<p class="note">' + esc(it.note) + '</p>' : '') +
+        (it.photoVersion ? '<div class="photo"><a target="_blank" rel="noopener" href="' + esc(photoUrl(it)) + '"><img loading="lazy" alt="Photo de la machine : ' + esc(it.name) + '" src="' + esc(photoUrl(it)) + '"></a></div>' : '') +
+        '<div class="actions">' +
+        '<button class="primary" data-act="done">Filtre changé aujourd’hui</button>' +
+        '<button class="primary" data-act="mdone">Entretien fait aujourd’hui</button>' +
+        '<button data-act="edit">Modifier</button>' +
+        (remote ? '<button data-act="photo">' + (it.photoVersion ? 'Changer la photo' : 'Photo de la machine') + '</button>' : '') +
+        (remote && it.photoVersion ? (photoConfirmId === it.id
+          ? '<button class="danger" data-act="photo-del-yes">Confirmer la suppression de la photo</button><button data-act="photo-del-no">Annuler</button>'
+          : '<button class="danger" data-act="photo-del">Supprimer la photo</button>') : '') +
+        '<button data-act="locate">' + (hasPos(it) ? 'Mettre à jour la position' : 'Enregistrer la position') + '</button>' +
+        (hasPos(it) ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(mapsUrl(it.latitude + ',' + it.longitude)) + '">Ouvrir dans Maps</a>'
+          : (it.address ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(mapsUrl(it.address)) + '">Itinéraire</a>' : '')) +
+        '<a class="btn" target="_blank" rel="noopener" href="' + esc(calendarUrl(it, i)) + '">Rappel filtre (1 an)</a>' +
+        '<a class="btn" target="_blank" rel="noopener" href="' + esc(maintenanceUrl(it)) + '">Rappel entretien (4 mois)</a>' +
+        (confirming
+          ? '<button class="danger" data-act="del-yes">Confirmer la suppression</button><button data-act="del-no">Annuler</button>'
+          : '<button class="danger" data-act="del">Supprimer</button>') +
+        '</div></li>';
+    }).join('');
+  }
+
+  /* ---------- persistence: db when available, else this browser only ---------- */
+  var LS_KEY = 'filtres-brita-v1';
+  function lsLoad() { try { var v = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+  function lsSave() { try { localStorage.setItem(LS_KEY, JSON.stringify(items)); } catch (e) {} }
+  function newId() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function say(msg) { statusEl.textContent = msg || ''; }
+
+  var remote = !!(SUPABASE_URL && SUPABASE_KEY);
+  var lastSnapshot = '';
+
+  function api(method, query, body, extra) {
+    var h = { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' };
+    if (SUPABASE_KEY.indexOf('sb_') !== 0) h.Authorization = 'Bearer ' + SUPABASE_KEY;
+    if (extra) for (var k in extra) h[k] = extra[k];
+    return fetch(SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/restaurants' + query, {
+      method: method, headers: h, body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      if (r.status === 204) return null;
+      return r.text().then(function (t) { return t ? JSON.parse(t) : null; });
+    });
+  }
+
+  function refresh() {
+    return api('GET', '?select=*&order=last_change.asc').then(function (rows) {
+      var snap = JSON.stringify(rows);
+      if (snap === lastSnapshot) return;
+      lastSnapshot = snap;
+      items = (rows || []).map(function (r) { return { id: r.id, name: String(r.name || ''), note: String(r.note || ''), filterName: String(r.filter_name || ''), maintenanceService: String(r.maintenance_service || ''), address: String(r.address || ''), lastChange: String(r.last_change || iso(today())), lastMaintenance: String(r.last_maintenance || ''), latitude: r.latitude == null ? null : Number(r.latitude), longitude: r.longitude == null ? null : Number(r.longitude), photoVersion: r.photo_version == null ? null : Number(r.photo_version) }; });
+      if (!editId) render();
+    }).catch(function () { say('Synchronisation impossible. Vérifiez la connexion.'); });
+  }
+
+  function saveItem(it) {
+    var k = items.findIndex(function (x) { return x.id === it.id; });
+    if (k >= 0) items[k] = it; else items.push(it);
+    if (!remote) { lsSave(); render(); return Promise.resolve(); }
+    render();
+    return api('POST', '?on_conflict=id', { id: it.id, name: it.name, note: it.note || '', filter_name: it.filterName || '', maintenance_service: it.maintenanceService || '', address: it.address || '', last_change: it.lastChange, last_maintenance: it.lastMaintenance || null, latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photo_version: it.photoVersion == null ? null : it.photoVersion },
+      { Prefer: 'resolution=merge-duplicates,return=minimal' }).then(function () { lastSnapshot = ''; return refresh(); },
+      function (e) { lastSnapshot = ''; refresh(); throw e; });
+  }
+  function removeItem(id) {
+    items = items.filter(function (x) { return x.id !== id; });
+    if (!remote) { lsSave(); render(); return Promise.resolve(); }
+    render();
+    return api('DELETE', '?id=eq.' + encodeURIComponent(id)).then(function () { lastSnapshot = ''; return refresh(); },
+      function (e) { lastSnapshot = ''; refresh(); throw e; });
+  }
+  function fail() { say('Enregistrement impossible. Réessayez dans un instant.'); }
+
+  listEl.addEventListener('click', function (ev) {
+    var btn = ev.target.closest('button[data-act]');
+    if (!btn) return;
+    var li = btn.closest('.item');
+    var id = li.getAttribute('data-id');
+    var it = items.find(function (x) { return x.id === id; });
+    if (!it) return;
+    var act = btn.getAttribute('data-act');
+    if (act === 'done') {
+      saveItem({ id: it.id, name: it.name, note: it.note, filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', lastChange: iso(today()), lastMaintenance: it.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion }).then(function () { say('Date mise à jour pour ' + it.name + '.'); }, fail);
+    } else if (act === 'mdone') {
+      saveItem(Object.assign({}, it, { lastMaintenance: iso(today()) })).then(function () { say('Entretien enregistré pour ' + it.name + '.'); }, fail);
+    } else if (act === 'edit') {
+      editId = id; confirmId = null;
+      draft = { name: it.name, note: it.note || '', filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', lastChange: it.lastChange, lastMaintenance: it.lastMaintenance || '' };
+      render();
+      var ne = document.getElementById('e-name'); if (ne) ne.focus();
+    } else if (act === 'photo-del') { photoConfirmId = id; render();
+    } else if (act === 'photo-del-no') { photoConfirmId = null; render();
+    } else if (act === 'photo-del-yes') {
+      photoConfirmId = null;
+      saveItem(Object.assign({}, it, { photoVersion: null })).then(function () { return deletePhoto(id); })
+        .then(function () { say('Photo supprimée pour ' + it.name + '.'); }, function () { render(); fail(); });
+    } else if (act === 'photo') {
+      photoId = id; photoInput.click();
+    } else if (act === 'locate') {
+      if (!navigator.geolocation) { say('La position n’est pas disponible sur cet appareil.'); return; }
+      btn.disabled = true; btn.textContent = 'Localisation…'; say('Recherche de la position, patientez quelques secondes…');
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var upd = Object.assign({}, it, { latitude: Math.round(pos.coords.latitude * 1e6) / 1e6, longitude: Math.round(pos.coords.longitude * 1e6) / 1e6 });
+        saveItem(upd).then(function () { say('Position enregistrée pour ' + it.name + ' (précision d’environ ' + Math.round(pos.coords.accuracy) + ' m).'); }, function () { render(); fail(); });
+      }, function (err) {
+        btn.disabled = false; btn.textContent = 'Enregistrer la position';
+        say(err && err.code === 1 ? 'Localisation refusée : autorisez-la pour ce site dans les réglages du navigateur ou de l’appareil.' : 'Position introuvable. Réessayez près d’une fenêtre ou à l’extérieur.');
+      }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+    } else if (act === 'cancel') { editId = null; draft = null; render(); }
+    else if (act === 'save') {
+      var nm = (draft.name || '').trim();
+      if (!nm || !draft.lastChange) { say('Le nom et la date sont obligatoires.'); return; }
+      var upd = { id: it.id, name: nm, note: (draft.note || '').trim(), filterName: (draft.filterName || '').trim(), maintenanceService: (draft.maintenanceService || '').trim(), address: (draft.address || '').trim(), lastChange: draft.lastChange, lastMaintenance: draft.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion };
+      editId = null; draft = null;
+      saveItem(upd).then(function () { say(nm + ' modifié.'); render(); }, function (e) { editId = id; draft = upd; render(); fail(e); });
+    } else if (act === 'del') { confirmId = id; render(); }
+    else if (act === 'del-no') { confirmId = null; render(); }
+    else if (act === 'del-yes') { confirmId = null; removeItem(id).then(function () { if (it.photoVersion) deletePhoto(id); say(it.name + ' supprimé.'); }, fail); }
+  });
+
+  document.getElementById('q').addEventListener('input', function (ev) { query = ev.target.value; render(); });
+
+  listEl.addEventListener('input', function (ev) {
+    if (!draft) return;
+    var t = ev.target;
+    if (t.id === 'e-name') draft.name = t.value;
+    else if (t.id === 'e-date') draft.lastChange = t.value;
+    else if (t.id === 'e-maint') draft.lastMaintenance = t.value;
+    else if (t.id === 'e-note') draft.note = t.value;
+    else if (t.id === 'e-filter') draft.filterName = t.value;
+    else if (t.id === 'e-service') draft.maintenanceService = t.value;
+    else if (t.id === 'e-address') draft.address = t.value;
+  });
+
+  form.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var name = document.getElementById('f-name').value.trim();
+    var date = document.getElementById('f-date').value;
+    var note = document.getElementById('f-note').value.trim();
+    var filterName = document.getElementById('f-filter').value.trim();
+    var maintenanceService = document.getElementById('f-service').value.trim();
+    var address = document.getElementById('f-address').value.trim();
+    if (!name || !date) return;
+    var it = { id: newId(), name: name, note: note, filterName: filterName, maintenanceService: maintenanceService, address: address, lastChange: date, lastMaintenance: document.getElementById('f-maint').value, latitude: null, longitude: null, photoVersion: null };
+    saveItem(it).then(function () {
+      form.reset();
+      document.getElementById('f-date').value = iso(today());
+      say(name + ' ajouté.');
+    }, fail);
+  });
+
+
+  /* ---------- rappels push (notification même app fermée) ---------- */
+  var PUSH_URL = SUPABASE_URL.replace(/\/$/, '') + '/functions/v1/push-reminders';
+  var pushBox = document.getElementById('push');
+  var pushBtn = document.getElementById('push-btn');
+  var pushMsg = document.getElementById('push-status');
+  function pushCall(method, body) {
+    return fetch(PUSH_URL, { method: method, headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); });
+  }
+  function keyBytes(b64) {
+    var s = (b64 + '===='.slice(b64.length % 4)).replace(/-/g, '+').replace(/_/g, '/');
+    var raw = atob(s), out = new Uint8Array(raw.length);
+    for (var i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+    return out;
+  }
+  function pushSay(m) { pushMsg.textContent = m || ''; }
+  function pushState(sub) {
+    pushBtn.textContent = sub ? 'Désactiver les rappels' : 'Activer les rappels';
+    pushBtn.className = sub ? '' : 'primary';
+    pushBtn.disabled = false;
+    pushSay(sub ? 'Rappels actifs sur cet appareil (filtres et entretiens) : 7 jours avant, le jour même, puis chaque semaine en cas de retard.' : 'Recevez une notification avant chaque échéance de filtre ou d’entretien, même app fermée.');
+  }
+  function pushSetup() {
+    var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    var installed = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    pushBox.hidden = false;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      pushBtn.hidden = true;
+      pushSay(ios && !installed ? 'Pour les rappels sur iPhone : touchez Partager, « Sur l’écran d’accueil », puis rouvrez l’app depuis l’icône.' : 'Ce navigateur ne gère pas les notifications.');
+      return;
+    }
+    navigator.serviceWorker.ready.then(function (reg) {
+      return reg.pushManager.getSubscription().then(function (sub) {
+        pushState(sub && Notification.permission === 'granted' ? sub : null);
+        pushBtn.addEventListener('click', function () {
+          pushBtn.disabled = true;
+          if (sub) {
+            var ep = sub.endpoint;
+            sub.unsubscribe().then(function () { return pushCall('POST', { action: 'unsubscribe', endpoint: ep }).catch(function () {}); })
+              .then(function () { sub = null; pushState(null); });
+            return;
+          }
+          Notification.requestPermission().then(function (perm) {
+            if (perm !== 'granted') { pushBtn.disabled = false; pushSay('Notifications refusées. Autorisez-les dans les réglages du navigateur ou de l’appareil, puis réessayez.'); return; }
+            return pushCall('GET').then(function (k) {
+              return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(k.publicKey) });
+            }).then(function (s) {
+              sub = s;
+              return pushCall('POST', { action: 'subscribe', subscription: s.toJSON() }).then(function () {
+                pushState(s);
+                return pushCall('POST', { action: 'test', endpoint: s.endpoint }).catch(function () {});
+              });
+            });
+          }).catch(function () { pushBtn.disabled = false; pushSay('Activation impossible. Vérifiez la connexion et réessayez.'); });
+        });
+      });
+    }).catch(function () { pushBox.hidden = true; });
+  }
+  if (remote) pushSetup();
+
+  document.getElementById('f-date').value = iso(today());
+  if (remote) {
+    say('Liste partagée avec l’équipe.');
+    refresh();
+    setInterval(refresh, 15000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+  } else {
+    items = lsLoad();
+    render();
+    say('Mode local : la liste reste sur cet appareil tant que Supabase n’est pas configuré.');
+  }
+})();
+if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+</script>
+</body>
+</html>
