@@ -137,8 +137,6 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     <input id="q" type="search" placeholder="Rechercher un restaurant" aria-label="Rechercher un restaurant" autocomplete="off" autocapitalize="off">
   </div>
 
-  <ul class="list" id="list" aria-live="polite"></ul>
-
   <form id="add-form" autocomplete="off">
     <h2>Ajouter un restaurant</h2>
     <label class="full" for="f-name">Restaurant
@@ -170,6 +168,8 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     </div>
     <p class="status full" id="status" role="status"></p>
   </form>
+  <ul class="list" id="list" aria-live="polite"></ul>
+
 </main>
 
 <input type="file" id="photo-input" accept="image/*" hidden>
