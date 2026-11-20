@@ -147,6 +147,9 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     <label class="full" for="f-address">Adresse (facultatif)
       <input id="f-address" maxlength="160" placeholder="Ex. Rue du Lac 12, 1000 Lausanne" autocomplete="off">
     </label>
+    <label class="full" for="f-phone">Téléphone (facultatif)
+      <input id="f-phone" type="tel" inputmode="tel" maxlength="40" placeholder="Ex. 021 792 13 73" autocomplete="off">
+    </label>
     <label class="full" for="f-filter">Nom du filtre (facultatif)
       <input id="f-filter" maxlength="80" placeholder="Ex. Brita Maxtra Pro">
     </label>
@@ -294,6 +297,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
       toast(m, true);
     });
   });
+  function telHref(p) { return 'tel:' + String(p || '').replace(/[^0-9+]/g, ''); }
   function hasPos(it) { return typeof it.latitude === 'number' && typeof it.longitude === 'number' && isFinite(it.latitude) && isFinite(it.longitude); }
   function mapsUrl(addr) { return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr); }
 
@@ -348,7 +352,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     }
 
     var q = norm(query).trim();
-    var shown = q ? sorted.filter(function (x) { return norm(x.it.name + ' ' + (x.it.note || '') + ' ' + (x.it.filterName || '') + ' ' + (x.it.maintenanceService || '') + ' ' + (x.it.address || '')).indexOf(q) !== -1; }) : sorted;
+    var shown = q ? sorted.filter(function (x) { return norm(x.it.name + ' ' + (x.it.note || '') + ' ' + (x.it.filterName || '') + ' ' + (x.it.maintenanceService || '') + ' ' + (x.it.address || '') + ' ' + (x.it.phone || '')).indexOf(q) !== -1; }) : sorted;
     if (!shown.length) {
       listEl.innerHTML = '<li class="empty"><p><strong>Aucun résultat pour « ' + esc(query.trim()) + ' ».</strong></p><p>Vérifiez l’orthographe ou effacez la recherche.</p></li>';
       return;
@@ -360,6 +364,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
         return '<li class="item" data-id="' + esc(it.id) + '"><div class="edit">' +
           '<label class="full" for="e-name">Restaurant<input id="e-name" maxlength="80" value="' + esc(draft.name) + '"></label>' +
           '<label class="full" for="e-address">Adresse<input id="e-address" maxlength="160" value="' + esc(draft.address) + '"></label>' +
+          '<label class="full" for="e-phone">Téléphone<input id="e-phone" type="tel" inputmode="tel" maxlength="40" value="' + esc(draft.phone || '') + '"></label>' +
           '<label class="full" for="e-filter">Nom du filtre<input id="e-filter" maxlength="80" value="' + esc(draft.filterName) + '"></label>' +
           '<label class="full" for="e-service">Service d’entretien<input id="e-service" maxlength="120" value="' + esc(draft.maintenanceService) + '"></label>' +
           '<label for="e-maint">Dernier entretien (facultatif)<input id="e-maint" type="date" value="' + esc(draft.lastMaintenance || '') + '"></label>' +
@@ -369,7 +374,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
       }
       return '<li class="item" data-id="' + esc(it.id) + '">' +
         '<div class="item-top"><div><h3 class="name">' + esc(it.name) + '</h3>' +
-        ((it.address || hasPos(it)) ? '<p class="note">' + esc([it.address, hasPos(it) ? 'GPS ' + it.latitude.toFixed(5) + ', ' + it.longitude.toFixed(5) : ''].filter(Boolean).join(' · ')) + '</p>' : '') +
+        ((it.address || it.phone || hasPos(it)) ? '<p class="note">' + [it.address ? esc(it.address) : '', it.phone ? '<a href="' + esc(telHref(it.phone)) + '">' + esc(it.phone) + '</a>' : '', hasPos(it) ? 'GPS ' + it.latitude.toFixed(5) + ', ' + it.longitude.toFixed(5) : ''].filter(Boolean).join(' · ') + '</p>' : '') +
         (it.filterName ? '<p class="filter-name">Filtre : ' + esc(it.filterName) + '</p>' : '') +
         (it.maintenanceService ? '<p class="filter-name">Entretien : ' + esc(it.maintenanceService) + '</p>' : '') +
         '</div><span class="pill ' + i.cls + '">' + esc(i.label) + '</span></div>' +
@@ -385,6 +390,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
         '<button class="primary" data-act="done">Filtre changé aujourd’hui</button>' +
         '<button class="primary" data-act="mdone">Entretien fait aujourd’hui</button>' +
         '<button data-act="edit">Modifier</button>' +
+        (it.phone ? '<a class="btn" href="' + esc(telHref(it.phone)) + '">Appeler</a>' : '') +
         (remote ? '<button data-act="photo">' + (it.photoVersion ? 'Changer la photo' : 'Photo de la machine') + '</button>' : '') +
         (remote && it.photoVersion ? (photoConfirmId === it.id
           ? '<button class="danger" data-act="photo-del-yes">Confirmer la suppression de la photo</button><button data-act="photo-del-no">Annuler</button>'
@@ -429,7 +435,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
       var snap = JSON.stringify(rows);
       if (snap === lastSnapshot) return;
       lastSnapshot = snap;
-      items = (rows || []).map(function (r) { return { id: r.id, name: String(r.name || ''), note: String(r.note || ''), filterName: String(r.filter_name || ''), maintenanceService: String(r.maintenance_service || ''), address: String(r.address || ''), lastChange: String(r.last_change || iso(today())), lastMaintenance: String(r.last_maintenance || ''), latitude: r.latitude == null ? null : Number(r.latitude), longitude: r.longitude == null ? null : Number(r.longitude), photoVersion: r.photo_version == null ? null : Number(r.photo_version) }; });
+      items = (rows || []).map(function (r) { return { id: r.id, name: String(r.name || ''), note: String(r.note || ''), filterName: String(r.filter_name || ''), maintenanceService: String(r.maintenance_service || ''), address: String(r.address || ''), phone: String(r.phone || ''), lastChange: String(r.last_change || iso(today())), lastMaintenance: String(r.last_maintenance || ''), latitude: r.latitude == null ? null : Number(r.latitude), longitude: r.longitude == null ? null : Number(r.longitude), photoVersion: r.photo_version == null ? null : Number(r.photo_version) }; });
       if (!editId) render();
     }).catch(function () { say('Synchronisation impossible. Vérifiez la connexion.'); });
   }
@@ -439,7 +445,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     if (k >= 0) items[k] = it; else items.push(it);
     if (!remote) { lsSave(); render(); return Promise.resolve(); }
     render();
-    return api('POST', '?on_conflict=id', { id: it.id, name: it.name, note: it.note || '', filter_name: it.filterName || '', maintenance_service: it.maintenanceService || '', address: it.address || '', last_change: it.lastChange, last_maintenance: it.lastMaintenance || null, latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photo_version: it.photoVersion == null ? null : it.photoVersion },
+    return api('POST', '?on_conflict=id', { id: it.id, name: it.name, note: it.note || '', filter_name: it.filterName || '', maintenance_service: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', last_change: it.lastChange, last_maintenance: it.lastMaintenance || null, latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photo_version: it.photoVersion == null ? null : it.photoVersion },
       { Prefer: 'resolution=merge-duplicates,return=minimal' }).then(function () { lastSnapshot = ''; return refresh(); },
       function (e) { lastSnapshot = ''; refresh(); throw e; });
   }
@@ -461,12 +467,12 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     if (!it) return;
     var act = btn.getAttribute('data-act');
     if (act === 'done') {
-      saveItem({ id: it.id, name: it.name, note: it.note, filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', lastChange: iso(today()), lastMaintenance: it.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion }).then(function () { say('Date mise à jour pour ' + it.name + '.'); }, fail);
+      saveItem({ id: it.id, name: it.name, note: it.note, filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', lastChange: iso(today()), lastMaintenance: it.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion }).then(function () { say('Date mise à jour pour ' + it.name + '.'); }, fail);
     } else if (act === 'mdone') {
       saveItem(Object.assign({}, it, { lastMaintenance: iso(today()) })).then(function () { say('Entretien enregistré pour ' + it.name + '.'); }, fail);
     } else if (act === 'edit') {
       editId = id; confirmId = null;
-      draft = { name: it.name, note: it.note || '', filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', lastChange: it.lastChange, lastMaintenance: it.lastMaintenance || '' };
+      draft = { name: it.name, note: it.note || '', filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', lastChange: it.lastChange, lastMaintenance: it.lastMaintenance || '' };
       render();
       var ne = document.getElementById('e-name'); if (ne) ne.focus();
     } else if (act === 'photo-del') { photoConfirmId = id; render();
@@ -491,7 +497,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     else if (act === 'save') {
       var nm = (draft.name || '').trim();
       if (!nm || !draft.lastChange) { say('Le nom et la date sont obligatoires.'); return; }
-      var upd = { id: it.id, name: nm, note: (draft.note || '').trim(), filterName: (draft.filterName || '').trim(), maintenanceService: (draft.maintenanceService || '').trim(), address: (draft.address || '').trim(), lastChange: draft.lastChange, lastMaintenance: draft.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion };
+      var upd = { id: it.id, name: nm, note: (draft.note || '').trim(), filterName: (draft.filterName || '').trim(), maintenanceService: (draft.maintenanceService || '').trim(), address: (draft.address || '').trim(), phone: (draft.phone || '').trim(), lastChange: draft.lastChange, lastMaintenance: draft.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion };
       editId = null; draft = null;
       saveItem(upd).then(function () { say(nm + ' modifié.'); render(); }, function (e) { editId = id; draft = upd; render(); fail(e); });
     } else if (act === 'del') { confirmId = id; render(); }
@@ -511,6 +517,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     else if (t.id === 'e-filter') draft.filterName = t.value;
     else if (t.id === 'e-service') draft.maintenanceService = t.value;
     else if (t.id === 'e-address') draft.address = t.value;
+    else if (t.id === 'e-phone') draft.phone = t.value;
   });
 
   form.addEventListener('submit', function (ev) {
@@ -521,8 +528,9 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     var filterName = document.getElementById('f-filter').value.trim();
     var maintenanceService = document.getElementById('f-service').value.trim();
     var address = document.getElementById('f-address').value.trim();
+    var phone = document.getElementById('f-phone').value.trim();
     if (!name || !date) return;
-    var it = { id: newId(), name: name, note: note, filterName: filterName, maintenanceService: maintenanceService, address: address, lastChange: date, lastMaintenance: document.getElementById('f-maint').value, latitude: null, longitude: null, photoVersion: null };
+    var it = { id: newId(), name: name, note: note, filterName: filterName, maintenanceService: maintenanceService, address: address, phone: phone, lastChange: date, lastMaintenance: document.getElementById('f-maint').value, latitude: null, longitude: null, photoVersion: null };
     saveItem(it).then(function () {
       form.reset();
       document.getElementById('f-date').value = iso(today());
