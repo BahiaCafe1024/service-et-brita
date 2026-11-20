@@ -159,8 +159,8 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     <label for="f-maint">Dernier entretien (facultatif)
       <input id="f-maint" type="date">
     </label>
-    <label for="f-date">Changement du filtre
-      <input id="f-date" type="date" required>
+    <label for="f-date">Changement du filtre (facultatif)
+      <input id="f-date" type="date">
     </label>
     <label class="full" for="f-note">Note (facultatif)
       <input id="f-note" maxlength="80" placeholder="Machine, étage…">
@@ -222,6 +222,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
       '<div class="gauge-label"><span>' + esc(leftText) + '</span><span>' + esc(rightText) + '</span></div></div>';
   }
   function info(it) {
+    if (!it.lastChange) return { none: true, last: null, due: null, left: Infinity, used: 0, cls: 'ok', label: 'Pas de filtre' };
     var last = parse(it.lastChange);
     var due = addYear(last);
     var left = diffDays(due, today());
@@ -324,6 +325,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
   }
 
   function calendarUrl(it, i) {
+    if (i.none) return '#';
     var start = i.left < 0 ? today() : i.due;
     var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
     var compact = function (d) { return iso(d).replace(/-/g, ''); };
@@ -339,7 +341,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
 
   function render() {
     var sorted = items.map(function (it) { return { it: it, i: info(it) }; })
-      .sort(function (a, b) { return a.i.due - b.i.due; });
+      .sort(function (a, b) { if (a.i.none || b.i.none) return (a.i.none ? 1 : 0) - (b.i.none ? 1 : 0); return a.i.due - b.i.due; });
 
     var urgent = sorted.filter(function (x) { return x.i.left <= 30; }).length;
     if (!sorted.length) summaryEl.innerHTML = 'Aucun restaurant pour l’instant.';
@@ -368,7 +370,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
           '<label class="full" for="e-filter">Nom du filtre<input id="e-filter" maxlength="80" value="' + esc(draft.filterName) + '"></label>' +
           '<label class="full" for="e-service">Service d’entretien<input id="e-service" maxlength="120" value="' + esc(draft.maintenanceService) + '"></label>' +
           '<label for="e-maint">Dernier entretien (facultatif)<input id="e-maint" type="date" value="' + esc(draft.lastMaintenance || '') + '"></label>' +
-          '<label for="e-date">Changement du filtre<input id="e-date" type="date" value="' + esc(draft.lastChange) + '"></label>' +
+          '<label for="e-date">Changement du filtre (facultatif)<input id="e-date" type="date" value="' + esc(draft.lastChange || '') + '"></label>' +
           '<label class="full" for="e-note">Note (facultatif)<input id="e-note" maxlength="80" value="' + esc(draft.note) + '"></label>' +
           '<div class="full actions"><button class="primary" data-act="save">Enregistrer</button><button data-act="cancel">Annuler</button></div></div></li>';
       }
@@ -381,13 +383,13 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
         '<dl class="dates"><div><dt>Dernier entretien</dt><dd>' + (it.lastMaintenance ? esc(fmt(parse(it.lastMaintenance))) : '—') + '</dd></div>' +
         '<div><dt>Prochain entretien</dt><dd>' + (mi ? esc(fmt(mi.due)) : '—') + '</dd></div></dl>' +
         (mi ? gaugeHtml(mi.cls, mi.used, 'Entretien écoulé à', 'Entretien fait', mi.label) : gaugeHtml('ok', 0, 'Aucun entretien enregistré', 'Aucun entretien enregistré', 'Tous les ' + MAINT_MONTHS + ' mois')) +
-        '<dl class="dates"><div><dt>Changement du filtre</dt><dd>' + esc(fmt(i.last)) + '</dd></div>' +
+        (i.none ? '' : '<dl class="dates"><div><dt>Changement du filtre</dt><dd>' + esc(fmt(i.last)) + '</dd></div>' +
         '<div><dt>Prochain changement</dt><dd>' + esc(fmt(i.due)) + '</dd></div></dl>' +
-        gaugeHtml(i.cls, i.used, 'Filtre utilisé à', 'Filtre neuf', Math.round(i.used * 100) + ' % de l’année') +
+        gaugeHtml(i.cls, i.used, 'Filtre utilisé à', 'Filtre neuf', Math.round(i.used * 100) + ' % de l’année')) +
         (it.note ? '<p class="note">' + esc(it.note) + '</p>' : '') +
         (it.photoVersion ? '<div class="photo"><a target="_blank" rel="noopener" href="' + esc(photoUrl(it)) + '"><img loading="lazy" alt="Photo de la machine : ' + esc(it.name) + '" src="' + esc(photoUrl(it)) + '"></a></div>' : '') +
         '<div class="actions">' +
-        '<button class="primary" data-act="done">Filtre changé aujourd’hui</button>' +
+        (i.none ? '' : '<button class="primary" data-act="done">Filtre changé aujourd’hui</button>') +
         '<button class="primary" data-act="mdone">Entretien fait aujourd’hui</button>' +
         '<button data-act="edit">Modifier</button>' +
         (it.phone ? '<a class="btn" href="' + esc(telHref(it.phone)) + '">Appeler</a>' : '') +
@@ -398,7 +400,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
         '<button data-act="locate">' + (hasPos(it) ? 'Mettre à jour la position' : 'Enregistrer la position') + '</button>' +
         (hasPos(it) ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(mapsUrl(it.latitude + ',' + it.longitude)) + '">Ouvrir dans Maps</a>'
           : (it.address ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(mapsUrl(it.address)) + '">Itinéraire</a>' : '')) +
-        '<a class="btn" target="_blank" rel="noopener" href="' + esc(calendarUrl(it, i)) + '">Rappel filtre (1 an)</a>' +
+        (i.none ? '' : '<a class="btn" target="_blank" rel="noopener" href="' + esc(calendarUrl(it, i)) + '">Rappel filtre (1 an)</a>') +
         '<a class="btn" target="_blank" rel="noopener" href="' + esc(maintenanceUrl(it)) + '">Rappel entretien (4 mois)</a>' +
         (confirming
           ? '<button class="danger" data-act="del-yes">Confirmer la suppression</button><button data-act="del-no">Annuler</button>'
@@ -435,7 +437,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
       var snap = JSON.stringify(rows);
       if (snap === lastSnapshot) return;
       lastSnapshot = snap;
-      items = (rows || []).map(function (r) { return { id: r.id, name: String(r.name || ''), note: String(r.note || ''), filterName: String(r.filter_name || ''), maintenanceService: String(r.maintenance_service || ''), address: String(r.address || ''), phone: String(r.phone || ''), lastChange: String(r.last_change || iso(today())), lastMaintenance: String(r.last_maintenance || ''), latitude: r.latitude == null ? null : Number(r.latitude), longitude: r.longitude == null ? null : Number(r.longitude), photoVersion: r.photo_version == null ? null : Number(r.photo_version) }; });
+      items = (rows || []).map(function (r) { return { id: r.id, name: String(r.name || ''), note: String(r.note || ''), filterName: String(r.filter_name || ''), maintenanceService: String(r.maintenance_service || ''), address: String(r.address || ''), phone: String(r.phone || ''), lastChange: String(r.last_change || ''), lastMaintenance: String(r.last_maintenance || ''), latitude: r.latitude == null ? null : Number(r.latitude), longitude: r.longitude == null ? null : Number(r.longitude), photoVersion: r.photo_version == null ? null : Number(r.photo_version) }; });
       if (!editId) render();
     }).catch(function () { say('Synchronisation impossible. Vérifiez la connexion.'); });
   }
@@ -445,7 +447,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     if (k >= 0) items[k] = it; else items.push(it);
     if (!remote) { lsSave(); render(); return Promise.resolve(); }
     render();
-    return api('POST', '?on_conflict=id', { id: it.id, name: it.name, note: it.note || '', filter_name: it.filterName || '', maintenance_service: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', last_change: it.lastChange, last_maintenance: it.lastMaintenance || null, latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photo_version: it.photoVersion == null ? null : it.photoVersion },
+    return api('POST', '?on_conflict=id', { id: it.id, name: it.name, note: it.note || '', filter_name: it.filterName || '', maintenance_service: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', last_change: it.lastChange || null, last_maintenance: it.lastMaintenance || null, latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photo_version: it.photoVersion == null ? null : it.photoVersion },
       { Prefer: 'resolution=merge-duplicates,return=minimal' }).then(function () { lastSnapshot = ''; return refresh(); },
       function (e) { lastSnapshot = ''; refresh(); throw e; });
   }
@@ -496,7 +498,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     } else if (act === 'cancel') { editId = null; draft = null; render(); }
     else if (act === 'save') {
       var nm = (draft.name || '').trim();
-      if (!nm || !draft.lastChange) { say('Le nom et la date sont obligatoires.'); return; }
+      if (!nm) { say('Le nom est obligatoire.'); return; }
       var upd = { id: it.id, name: nm, note: (draft.note || '').trim(), filterName: (draft.filterName || '').trim(), maintenanceService: (draft.maintenanceService || '').trim(), address: (draft.address || '').trim(), phone: (draft.phone || '').trim(), lastChange: draft.lastChange, lastMaintenance: draft.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion };
       editId = null; draft = null;
       saveItem(upd).then(function () { say(nm + ' modifié.'); render(); }, function (e) { editId = id; draft = upd; render(); fail(e); });
@@ -529,11 +531,10 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     var maintenanceService = document.getElementById('f-service').value.trim();
     var address = document.getElementById('f-address').value.trim();
     var phone = document.getElementById('f-phone').value.trim();
-    if (!name || !date) return;
+    if (!name) return;
     var it = { id: newId(), name: name, note: note, filterName: filterName, maintenanceService: maintenanceService, address: address, phone: phone, lastChange: date, lastMaintenance: document.getElementById('f-maint').value, latitude: null, longitude: null, photoVersion: null };
     saveItem(it).then(function () {
       form.reset();
-      document.getElementById('f-date').value = iso(today());
       say(name + ' ajouté.');
     }, fail);
   });
@@ -599,7 +600,6 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
   }
   if (remote) pushSetup();
 
-  document.getElementById('f-date').value = iso(today());
   if (remote) {
     say('Liste partagée avec l’équipe.');
     refresh();
