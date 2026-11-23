@@ -151,8 +151,11 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     <label class="full" for="f-filter">Nom du filtre (facultatif)
       <input id="f-filter" maxlength="80" placeholder="Ex. Brita Maxtra Pro">
     </label>
-    <label class="full" for="f-service">Service d’entretien (facultatif)
-      <input id="f-service" maxlength="120" placeholder="Ex. Café Service SA, contrat annuel">
+    <label class="full" for="f-service">Marque de machine (facultatif)
+      <input id="f-service" maxlength="120" placeholder="Ex. Franke, Jura, Schaerer">
+    </label>
+    <label class="full" for="f-grinder">Marque du moulin (facultatif)
+      <input id="f-grinder" maxlength="120" placeholder="Ex. Mazzer, Eureka, Anfim">
     </label>
     <label for="f-maint">Dernier entretien (facultatif)
       <input id="f-maint" type="date">
@@ -316,7 +319,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     if (start < today()) start = today();
     var end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
     var compact = function (d) { return iso(d).replace(/-/g, ''); };
-    var details = 'Entretien de la machine à café.' + (it.maintenanceService ? ' Service : ' + it.maintenanceService + '.' : '') + (it.filterName ? ' Filtre : ' + it.filterName + '.' : '') + (it.note ? ' ' + it.note : '');
+    var details = 'Entretien de la machine à café.' + (it.maintenanceService ? ' Machine : ' + it.maintenanceService + '.' : '') + (it.filterName ? ' Filtre : ' + it.filterName + '.' : '') + (it.note ? ' ' + it.note : '');
     var q = [
       'action=TEMPLATE',
       'text=' + encodeURIComponent('Entretien machine à café : ' + it.name),
@@ -337,7 +340,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
       'text=' + encodeURIComponent('Changer le filtre Brita : ' + it.name),
       'dates=' + compact(start) + '/' + compact(end),
       'recur=' + encodeURIComponent('RRULE:FREQ=YEARLY'),
-      'details=' + encodeURIComponent('Remplacer le filtre à eau Brita de la machine à café.' + (it.filterName ? ' Filtre : ' + it.filterName + '.' : '') + (it.maintenanceService ? ' Entretien : ' + it.maintenanceService + '.' : '') + (it.note ? ' ' + it.note : ''))
+      'details=' + encodeURIComponent('Remplacer le filtre à eau Brita de la machine à café.' + (it.filterName ? ' Filtre : ' + it.filterName + '.' : '') + (it.maintenanceService ? ' Machine : ' + it.maintenanceService + '.' : '') + (it.note ? ' ' + it.note : ''))
     ];
     return 'https://calendar.google.com/calendar/render?' + q.join('&');
   }
@@ -357,7 +360,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     }
 
     var q = norm(query).trim();
-    var shown = q ? sorted.filter(function (x) { return norm(x.it.name + ' ' + (x.it.note || '') + ' ' + (x.it.filterName || '') + ' ' + (x.it.maintenanceService || '') + ' ' + (x.it.address || '') + ' ' + (x.it.phone || '') + ' ' + (x.it.parts || '')).indexOf(q) !== -1; }) : sorted;
+    var shown = q ? sorted.filter(function (x) { return norm(x.it.name + ' ' + (x.it.note || '') + ' ' + (x.it.filterName || '') + ' ' + (x.it.maintenanceService || '') + ' ' + (x.it.address || '') + ' ' + (x.it.phone || '') + ' ' + (x.it.parts || '') + ' ' + (x.it.grinderBrand || '')).indexOf(q) !== -1; }) : sorted;
     if (!shown.length) {
       listEl.innerHTML = '<li class="empty"><p><strong>Aucun résultat pour « ' + esc(query.trim()) + ' ».</strong></p><p>Vérifiez l’orthographe ou effacez la recherche.</p></li>';
       return;
@@ -371,7 +374,8 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
           '<label class="full" for="e-address">Adresse<input id="e-address" maxlength="160" value="' + esc(draft.address) + '"></label>' +
           '<label class="full" for="e-phone">Téléphone<input id="e-phone" type="tel" inputmode="tel" maxlength="40" value="' + esc(draft.phone || '') + '"></label>' +
           '<label class="full" for="e-filter">Nom du filtre<input id="e-filter" maxlength="80" value="' + esc(draft.filterName) + '"></label>' +
-          '<label class="full" for="e-service">Service d’entretien<input id="e-service" maxlength="120" value="' + esc(draft.maintenanceService) + '"></label>' +
+          '<label class="full" for="e-service">Marque de machine<input id="e-service" maxlength="120" value="' + esc(draft.maintenanceService) + '"></label>' +
+          '<label class="full" for="e-grinder">Marque du moulin<input id="e-grinder" maxlength="120" value="' + esc(draft.grinderBrand || '') + '"></label>' +
           '<label for="e-maint">Dernier entretien (facultatif)<input id="e-maint" type="date" value="' + esc(draft.lastMaintenance || '') + '"></label>' +
           '<label for="e-date">Changement du filtre (facultatif)<input id="e-date" type="date" value="' + esc(draft.lastChange || '') + '"></label>' +
           '<label class="full" for="e-parts">Pièces détachées changées (facultatif)<input id="e-parts" maxlength="200" value="' + esc(draft.parts || '') + '"></label>' +
@@ -382,7 +386,8 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
         '<div class="item-top"><div><h3 class="name">' + esc(it.name) + '</h3>' +
         ((it.address || it.phone || hasPos(it)) ? '<p class="note">' + [it.address ? esc(it.address) : '', it.phone ? '<a href="' + esc(telHref(it.phone)) + '">' + esc(it.phone) + '</a>' : '', hasPos(it) ? 'GPS ' + it.latitude.toFixed(5) + ', ' + it.longitude.toFixed(5) : ''].filter(Boolean).join(' · ') + '</p>' : '') +
         (it.filterName ? '<p class="filter-name">Filtre : ' + esc(it.filterName) + '</p>' : '') +
-        (it.maintenanceService ? '<p class="filter-name">Entretien : ' + esc(it.maintenanceService) + '</p>' : '') +
+        (it.maintenanceService ? '<p class="filter-name">Machine : ' + esc(it.maintenanceService) + '</p>' : '') +
+        (it.grinderBrand ? '<p class="filter-name">Moulin : ' + esc(it.grinderBrand) + '</p>' : '') +
         '</div><span class="pill ' + i.cls + '">' + esc(i.label) + '</span></div>' +
         '<dl class="dates"><div><dt>Dernier entretien</dt><dd>' + (it.lastMaintenance ? esc(fmt(parse(it.lastMaintenance))) : '—') + '</dd></div>' +
         '<div><dt>Prochain entretien</dt><dd>' + (mi ? esc(fmt(mi.due)) : '—') + '</dd></div></dl>' +
@@ -442,7 +447,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
       var snap = JSON.stringify(rows);
       if (snap === lastSnapshot) return;
       lastSnapshot = snap;
-      items = (rows || []).map(function (r) { return { id: r.id, name: String(r.name || ''), note: String(r.note || ''), filterName: String(r.filter_name || ''), maintenanceService: String(r.maintenance_service || ''), address: String(r.address || ''), phone: String(r.phone || ''), parts: String(r.parts || ''), lastChange: String(r.last_change || ''), lastMaintenance: String(r.last_maintenance || ''), latitude: r.latitude == null ? null : Number(r.latitude), longitude: r.longitude == null ? null : Number(r.longitude), photoVersion: r.photo_version == null ? null : Number(r.photo_version) }; });
+      items = (rows || []).map(function (r) { return { id: r.id, name: String(r.name || ''), note: String(r.note || ''), filterName: String(r.filter_name || ''), maintenanceService: String(r.maintenance_service || ''), address: String(r.address || ''), phone: String(r.phone || ''), parts: String(r.parts || ''), grinderBrand: String(r.grinder_brand || ''), lastChange: String(r.last_change || ''), lastMaintenance: String(r.last_maintenance || ''), latitude: r.latitude == null ? null : Number(r.latitude), longitude: r.longitude == null ? null : Number(r.longitude), photoVersion: r.photo_version == null ? null : Number(r.photo_version) }; });
       if (!editId) render();
     }).catch(function () { say('Synchronisation impossible. Vérifiez la connexion.'); });
   }
@@ -452,7 +457,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     if (k >= 0) items[k] = it; else items.push(it);
     if (!remote) { lsSave(); render(); return Promise.resolve(); }
     render();
-    return api('POST', '?on_conflict=id', { id: it.id, name: it.name, note: it.note || '', filter_name: it.filterName || '', maintenance_service: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', parts: it.parts || '', last_change: it.lastChange || null, last_maintenance: it.lastMaintenance || null, latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photo_version: it.photoVersion == null ? null : it.photoVersion },
+    return api('POST', '?on_conflict=id', { id: it.id, name: it.name, note: it.note || '', filter_name: it.filterName || '', maintenance_service: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', parts: it.parts || '', grinder_brand: it.grinderBrand || '', last_change: it.lastChange || null, last_maintenance: it.lastMaintenance || null, latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photo_version: it.photoVersion == null ? null : it.photoVersion },
       { Prefer: 'resolution=merge-duplicates,return=minimal' }).then(function () { lastSnapshot = ''; return refresh(); },
       function (e) { lastSnapshot = ''; refresh(); throw e; });
   }
@@ -474,12 +479,12 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     if (!it) return;
     var act = btn.getAttribute('data-act');
     if (act === 'done') {
-      saveItem({ id: it.id, name: it.name, note: it.note, filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', parts: it.parts || '', lastChange: iso(today()), lastMaintenance: it.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion }).then(function () { say('Date mise à jour pour ' + it.name + '.'); }, fail);
+      saveItem({ id: it.id, name: it.name, note: it.note, filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', parts: it.parts || '', grinderBrand: it.grinderBrand || '', lastChange: iso(today()), lastMaintenance: it.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion }).then(function () { say('Date mise à jour pour ' + it.name + '.'); }, fail);
     } else if (act === 'mdone') {
       saveItem(Object.assign({}, it, { lastMaintenance: iso(today()) })).then(function () { say('Entretien enregistré pour ' + it.name + '.'); }, fail);
     } else if (act === 'edit') {
       editId = id; confirmId = null;
-      draft = { name: it.name, note: it.note || '', filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', parts: it.parts || '', lastChange: it.lastChange, lastMaintenance: it.lastMaintenance || '' };
+      draft = { name: it.name, note: it.note || '', filterName: it.filterName || '', maintenanceService: it.maintenanceService || '', address: it.address || '', phone: it.phone || '', parts: it.parts || '', grinderBrand: it.grinderBrand || '', lastChange: it.lastChange, lastMaintenance: it.lastMaintenance || '' };
       render();
       var ne = document.getElementById('e-name'); if (ne) ne.focus();
     } else if (act === 'photo-del') { photoConfirmId = id; render();
@@ -504,7 +509,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     else if (act === 'save') {
       var nm = (draft.name || '').trim();
       if (!nm) { say('Le nom est obligatoire.'); return; }
-      var upd = { id: it.id, name: nm, note: (draft.note || '').trim(), filterName: (draft.filterName || '').trim(), maintenanceService: (draft.maintenanceService || '').trim(), address: (draft.address || '').trim(), phone: (draft.phone || '').trim(), parts: (draft.parts || '').trim(), lastChange: draft.lastChange, lastMaintenance: draft.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion };
+      var upd = { id: it.id, name: nm, note: (draft.note || '').trim(), filterName: (draft.filterName || '').trim(), maintenanceService: (draft.maintenanceService || '').trim(), address: (draft.address || '').trim(), phone: (draft.phone || '').trim(), parts: (draft.parts || '').trim(), grinderBrand: (draft.grinderBrand || '').trim(), lastChange: draft.lastChange, lastMaintenance: draft.lastMaintenance || '', latitude: it.latitude == null ? null : it.latitude, longitude: it.longitude == null ? null : it.longitude, photoVersion: it.photoVersion == null ? null : it.photoVersion };
       editId = null; draft = null;
       saveItem(upd).then(function () { say(nm + ' modifié.'); render(); }, function (e) { editId = id; draft = upd; render(); fail(e); });
     } else if (act === 'del') { confirmId = id; render(); }
@@ -526,6 +531,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     else if (t.id === 'e-address') draft.address = t.value;
     else if (t.id === 'e-phone') draft.phone = t.value;
     else if (t.id === 'e-parts') draft.parts = t.value;
+    else if (t.id === 'e-grinder') draft.grinderBrand = t.value;
   });
 
   form.addEventListener('submit', function (ev) {
@@ -538,7 +544,7 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     var address = document.getElementById('f-address').value.trim();
     var phone = document.getElementById('f-phone').value.trim();
     if (!name) return;
-    var it = { id: newId(), name: name, note: note, filterName: filterName, maintenanceService: maintenanceService, address: address, phone: phone, parts: document.getElementById('f-parts').value.trim(), lastChange: date, lastMaintenance: document.getElementById('f-maint').value, latitude: null, longitude: null, photoVersion: null };
+    var it = { id: newId(), name: name, note: note, filterName: filterName, maintenanceService: maintenanceService, address: address, phone: phone, parts: document.getElementById('f-parts').value.trim(), grinderBrand: document.getElementById('f-grinder').value.trim(), lastChange: date, lastMaintenance: document.getElementById('f-maint').value, latitude: null, longitude: null, photoVersion: null };
     saveItem(it).then(function () {
       form.reset();
       say(name + ' ajouté.');
