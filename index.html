@@ -116,6 +116,19 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
 .push .status { flex: 1 1 200px; }
 @media (max-width: 480px) { form { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: no-preference) { .gauge span { transition: width 0.4s ease; } }
+.title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.gal-btn { font: inherit; font-weight: 600; font-size: 0.9375rem; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: inherit; cursor: pointer; }
+#gallery { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+#gallery[hidden] { display: none; }
+.gal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.gal-head h2 { margin: 0; font-size: 1.125rem; }
+.gal-head button { font: inherit; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+.gal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.gal-grid figure { margin: 0; }
+.gal-grid img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; background: var(--line); }
+.gal-grid figcaption { font-size: 0.875rem; margin-top: 4px; overflow-wrap: anywhere; }
+.gal-empty { color: var(--muted); margin: 0; }
+body.gallery-open .search, body.gallery-open #add-form, body.gallery-open #list { display: none; }
 </style>
 
 </head>
@@ -124,13 +137,18 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
   <header>
     <img class="logo" src="logo.png" alt="Bahia Café" width="224" height="84">
     <p class="eyebrow">Entretien des machines à café</p>
-    <h1>Filtres Brita</h1>
+    <div class="title-row"><h1>Filtres Brita</h1><button type="button" id="gal-btn" class="gal-btn" aria-expanded="false">📁 Photos <span id="gal-count"></span></button></div>
     <p class="summary" id="summary">Chargement…</p>
     <div class="push" id="push" hidden>
       <button type="button" id="push-btn">Activer les rappels</button>
       <p class="status" id="push-status" role="status"></p>
     </div>
   </header>
+
+  <section id="gallery" hidden aria-label="Photos des machines">
+    <div class="gal-head"><h2>Photos des machines</h2><button type="button" id="gal-close">Fermer</button></div>
+    <div class="gal-grid" id="gal-grid"></div>
+  </section>
 
   <div class="search">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
@@ -345,7 +363,24 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
     return 'https://calendar.google.com/calendar/render?' + q.join('&');
   }
 
+  function renderGallery() {
+    var withPhoto = items.filter(function (x) { return x.photoVersion; }).sort(function (a, b) { return a.name.localeCompare(b.name, 'fr'); });
+    document.getElementById('gal-count').textContent = withPhoto.length ? '(' + withPhoto.length + ')' : '';
+    document.getElementById('gal-grid').innerHTML = withPhoto.length ? withPhoto.map(function (x) {
+      return '<figure><a target="_blank" rel="noopener" href="' + esc(photoUrl(x)) + '"><img loading="lazy" alt="Photo de la machine : ' + esc(x.name) + '" src="' + esc(photoUrl(x)) + '"></a><figcaption>' + esc(x.name) + '</figcaption></figure>';
+    }).join('') : '<p class="gal-empty">Aucune photo pour l’instant. Ajoutez-en depuis la fiche d’un restaurant (« Photo de la machine »).</p>';
+  }
+  function setGallery(open) {
+    document.getElementById('gallery').hidden = !open;
+    document.body.classList.toggle('gallery-open', open);
+    document.getElementById('gal-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) window.scrollTo(0, 0);
+  }
+  document.getElementById('gal-btn').addEventListener('click', function () { setGallery(document.getElementById('gallery').hidden); });
+  document.getElementById('gal-close').addEventListener('click', function () { setGallery(false); });
+
   function render() {
+    renderGallery();
     var sorted = items.map(function (it) { return { it: it, i: info(it) }; })
       .sort(function (a, b) { if (a.i.none || b.i.none) return (a.i.none ? 1 : 0) - (b.i.none ? 1 : 0); return a.i.due - b.i.due; });
 
