@@ -117,7 +117,8 @@ input { font: inherit; font-size: 1rem; font-weight: 400; color: var(--ink); bac
 @media (max-width: 480px) { form { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: no-preference) { .gauge span { transition: width 0.4s ease; } }
 .title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.gal-btn { font: inherit; font-weight: 600; font-size: 0.9375rem; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: inherit; cursor: pointer; }
+.title-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.gal-btn { text-decoration: none; display: inline-block;  font: inherit; font-weight: 600; font-size: 0.9375rem; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: inherit; cursor: pointer; }
 #gallery { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
 #gallery[hidden] { display: none; }
 .gal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
@@ -140,7 +141,7 @@ body.gallery-open .search, body.gallery-open #add-form, body.gallery-open #list 
   <header>
     <img class="logo" src="logo.jpg" alt="Bahia Café" width="1000" height="455">
     <p class="eyebrow">Entretien des machines à café</p>
-    <div class="title-row"><h1>Filtres Brita</h1><button type="button" id="gal-btn" class="gal-btn" aria-expanded="false">📁 Photos <span id="gal-count"></span></button></div>
+    <div class="title-row"><h1>Filtres Brita</h1><div class="title-btns"><button type="button" id="gal-btn" class="gal-btn" aria-expanded="false">📁 Photos <span id="gal-count"></span></button><a class="gal-btn" href="ecran.html">🖥 Écran</a></div></div>
     <p class="summary" id="summary">Chargement…</p>
     <div class="push" id="push" hidden>
       <button type="button" id="push-btn">Activer les rappels</button>

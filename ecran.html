@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Écran – Filtres Brita</title>
+<style>
+:root { color-scheme: dark; --bg:#0b1418; --surface:#132127; --ink:#e2eef1; --muted:#8fa9b2; --line:#243a43; --late:#ff8f86; --late-bg:#47211f; --soon:#f0b559; --soon-bg:#3e2d10; --ok:#7fd4a1; --ok-bg:#163a29; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { min-height: 100vh; padding: clamp(16px, 3vw, 40px); display: flex; flex-direction: column; gap: 20px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+.top img { height: clamp(56px, 9vw, 110px); width: auto; border-radius: 10px; display: block; }
+.top h1 { margin: 0; font-size: clamp(1.5rem, 3.4vw, 3rem); }
+.clock { text-align: right; }
+.clock .t { font-size: clamp(2rem, 5vw, 4.5rem); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.clock .d { color: var(--muted); font-size: clamp(1rem, 1.8vw, 1.6rem); margin-top: 4px; }
+.sum { font-size: clamp(1.1rem, 2vw, 1.8rem); color: var(--muted); margin: 0; }
+.sum strong { color: var(--ink); }
+ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+li { display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-left-width: 10px; border-radius: 12px; padding: clamp(12px, 1.6vw, 22px) clamp(16px, 2vw, 28px); }
+li.late { border-left-color: var(--late); }
+li.soon { border-left-color: var(--soon); }
+li.ok { border-left-color: var(--ok); }
+.n { font-size: clamp(1.3rem, 2.6vw, 2.4rem); font-weight: 700; overflow-wrap: anywhere; }
+.w { color: var(--muted); font-size: clamp(1rem, 1.7vw, 1.5rem); grid-column: 1; }
+.b { grid-row: 1 / span 2; grid-column: 2; font-size: clamp(1.1rem, 2vw, 1.9rem); font-weight: 700; padding: 6px 16px; border-radius: 999px; white-space: nowrap; }
+li.late .b { background: var(--late-bg); color: var(--late); }
+li.soon .b { background: var(--soon-bg); color: var(--soon); }
+li.ok .b { background: var(--ok-bg); color: var(--ok); }
+.empty { font-size: clamp(1.4rem, 3vw, 2.6rem); color: var(--ok); text-align: center; padding: 40px 0; }
+.foot { color: var(--muted); font-size: 0.95rem; margin-top: auto; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.foot a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap"><img src="logo.jpg" alt="Bahia Café"><h1>À faire : filtres et entretiens</h1></div>
+    <div class="clock"><div class="t" id="t">--:--</div><div class="d" id="d"></div></div>
+  </div>
+  <p class="sum" id="sum">Chargement…</p>
+  <ul id="list"></ul>
+  <div class="foot"><span id="upd"></span><a href="index.html">Ouvrir l’appli</a></div>
+</main>
+<script>
+(function () {
+  var SUPABASE_URL = 'https://kdtrsyxxqaqmjvpaxmdo.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_GOHrEzhuAk34JhRXGBwnZg_myMGhdSe';
+  var WINDOW_DAYS = 60, MAINT_MONTHS = 4;
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function parse(s) { var p = String(s).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function today() { var n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function addYear(d) { var r = new Date(d.getFullYear() + 1, d.getMonth(), d.getDate()); if (r.getMonth() !== d.getMonth()) r = new Date(d.getFullYear() + 1, d.getMonth() + 1, 0); return r; }
+  function addMonths(d, n) { var r = new Date(d.getFullYear(), d.getMonth() + n, d.getDate()); if (r.getDate() !== d.getDate()) r = new Date(d.getFullYear(), d.getMonth() + n + 1, 0); return r; }
+  function diffDays(a, b) { return Math.round((Date.UTC(a.getFullYear(), a.getMonth(), a.getDate()) - Date.UTC(b.getFullYear(), b.getMonth(), b.getDate())) / 86400000); }
+  function fmt(d) { return d.toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function plural(n, a, b) { return n + ' ' + (n === 1 ? a : b); }
+
+  function tick() {
+    var n = new Date();
+    document.getElementById('t').textContent = pad(n.getHours()) + ':' + pad(n.getMinutes());
+    document.getElementById('d').textContent = n.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  function load() {
+    var h = { apikey: SUPABASE_KEY };
+    return fetch(SUPABASE_URL + '/rest/v1/restaurants?select=name,last_change,last_maintenance', { headers: h })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (rows) {
+        var t = today(), tasks = [];
+        (rows || []).forEach(function (r) {
+          if (r.last_change) { var due = addYear(parse(r.last_change)); tasks.push({ name: r.name, what: 'Changement du filtre', due: due, left: diffDays(due, t) }); }
+          if (r.last_maintenance) { var du = addMonths(parse(r.last_maintenance), MAINT_MONTHS); tasks.push({ name: r.name, what: 'Entretien de la machine', due: du, left: diffDays(du, t) }); }
+        });
+        tasks = tasks.filter(function (x) { return x.left <= WINDOW_DAYS; }).sort(function (a, b) { return a.left - b.left; });
+        var late = tasks.filter(function (x) { return x.left < 0; }).length;
+        var soon = tasks.filter(function (x) { return x.left >= 0 && x.left <= 30; }).length;
+        document.getElementById('sum').innerHTML = !tasks.length ? 'Rien à faire dans les ' + WINDOW_DAYS + ' prochains jours.' :
+          '<strong>' + plural(late, 'en retard', 'en retard') + '</strong> · <strong>' + plural(soon, 'à faire dans les 30 jours', 'à faire dans les 30 jours') + '</strong> · prochains ' + WINDOW_DAYS + ' jours affichés';
+        document.getElementById('list').innerHTML = tasks.length ? tasks.map(function (x) {
+          var cls = x.left < 0 ? 'late' : (x.left <= 30 ? 'soon' : 'ok');
+          var b = x.left < 0 ? 'En retard de ' + plural(-x.left, 'jour', 'jours') : (x.left === 0 ? 'Aujourd’hui' : 'Dans ' + plural(x.left, 'jour', 'jours'));
+          return '<li class="' + cls + '"><div class="n">' + esc(x.name) + '</div><div class="w">' + esc(x.what) + ' · ' + esc(fmt(x.due)) + '</div><div class="b">' + esc(b) + '</div></li>';
+        }).join('') : '<li class="empty" style="display:block;border:0;background:none">✔ Tout est à jour</li>';
+        var n = new Date(); document.getElementById('upd').textContent = 'Mis à jour à ' + pad(n.getHours()) + ':' + pad(n.getMinutes());
+      })
+      .catch(function () { document.getElementById('upd').textContent = 'Connexion impossible, nouvel essai dans 5 minutes.'; });
+  }
+
+  function keepAwake() { try { if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(function () {}); } catch (e) {} }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { keepAwake(); load(); } });
+  tick(); setInterval(tick, 15000);
+  load(); setInterval(load, 5 * 60 * 1000);
+  keepAwake();
+})();
+</script>
+</body>
+</html>
